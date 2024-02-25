@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diff3d"
+description = "3D Image Diffusion."
+readme = {file = "README.md", content-type="text/markdown"}
+license = {text = "MIT"}
+authors = [
+    {name = "Taras Savchyn", email="trsvchn@gmail.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "einops>=0.4",
+    "einops-exts",
+    "rotary-embedding-torch",
+    "sacremoses",
+    "sentencepiece",
+    "torch>=1.10",
+    "torchvision",
+    "transformers[torch]",
+    "tqdm"
+]
+dynamic = ["version"]
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["diff3d", "diff3d.*"]
+
+[tool.setuptools.dynamic.version]
+attr = "diff3d.__version__"
