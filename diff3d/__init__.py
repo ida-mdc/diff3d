@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+import os
 import math
 import copy
 import torch
@@ -685,6 +686,39 @@ class GaussianDiffusion(nn.Module):
         )
 
     @torch.inference_mode()
+    def inpaint(self, image, mask, save_every=100, cond=None, cond_scale=1.0):
+        b = image.size(0)
+        device = self.betas.device
+
+        os.makedirs("./inpainting", exist_ok=True)
+
+        # Normalize image.
+        image = normalize_img(image)
+        # Apply mask.
+        image[mask.bool()] = torch.randn_like(mask[mask == 1], device=device)
+        img = image
+
+        # Optionally save intermediate results to disk.
+        if save_every:
+            for j, im in enumerate(img):
+                video_tensor_to_gif(unnormalize_img(im), f"./inpainting/img_{j}_timestep_0.gif")
+
+        # Loop here:
+        for i in tqdm(reversed(range(0, self.num_timesteps)), desc="sampling loop time step", total=self.num_timesteps):
+            img = self.p_sample(
+                img, torch.full((b,), i, device=device, dtype=torch.long), cond=cond, cond_scale=cond_scale
+            )
+            img[~mask.bool()] = image[~mask.bool()]
+
+            # Optionally save intermediate results to disk.
+            if save_every:
+                if (self.num_timesteps - i) % save_every == 0:
+                    for j, im in enumerate(img):
+                        video_tensor_to_gif(unnormalize_img(im), f"./inpainting/img_{j}_timestep_{self.num_timesteps - i}.gif")
+
+        return unnormalize_img(img)
+
+    @torch.inference_mode()
     def interpolate(self, x1, x2, t=None, lam=0.5):
         b, *_, device = *x1.shape, x1.device
         t = default(t, self.num_timesteps - 1)
@@ -916,7 +950,7 @@ class Trainer(object):
         }
         torch.save(data, str(self.results_folder / f"model-{milestone}.pt"))
 
-    def load(self, milestone, **kwargs):
+    def load(self, milestone, map_location=None, **kwargs):
         if milestone == -1:
             all_milestones = [int(p.stem.split("-")[-1]) for p in Path(self.results_folder).glob("**/*.pt")]
             assert (
@@ -924,7 +958,7 @@ class Trainer(object):
             ), "need to have at least one milestone to load from latest checkpoint (milestone == -1)"
             milestone = max(all_milestones)
 
-        data = torch.load(str(self.results_folder / f"model-{milestone}.pt"))
+        data = torch.load(str(self.results_folder / f"model-{milestone}.pt"), map_location=map_location)
 
         self.step = data["step"]
         self.model.load_state_dict(data["model"], **kwargs)

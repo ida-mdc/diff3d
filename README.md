@@ -22,6 +22,8 @@ $ pip install .
 
 ## Usage
 
+### Generate Image
+
 ```python
 import torch
 from diff3d import Unet3D, GaussianDiffusion
@@ -46,6 +48,38 @@ loss.backward()
 
 sampled_image = diffusion.sample(batch_size=4)
 sampled_image.shape # (4, 1, 32, 32, 32)
+```
+
+### Image Inpainting
+
+```python
+import torch
+from diff3d import Unet3D, GaussianDiffusion
+
+model = Unet3D(
+    dim=64,
+    dim_mults=(1, 2, 4, 8)
+)
+
+diffusion = GaussianDiffusion(
+    model,
+    image_size=32,
+    num_frames=32,  # The len of depth dimension (ideally same as image_size)
+    timesteps=1000,  # number of steps
+    loss_type="l1",  # L1 or L2
+)
+
+# New `inpaint` methods takes a batch of images and a batch of corresponding masks. Returns reconstructions os the same shape as images and masks. 
+# By deafault writes intermediate inpaintings to `./inpainting` directory every 100 timesteps. Set None or False to disable.
+images = torch.randn(4, 1, 32, 32, 32)  # (batch, channels, depth, height, width), normalized from 0 to 1 (e.g. after pil_to_tensor transform).
+masks = ...  # binary masks (batch, channels, depth, height, width), where 1 - indicates inpainting regions.
+
+inpainting = diffusion.inpaint(
+    image=images,
+    mask=masks,
+    save_every=100,
+)
+inpainting.shape  # (4, 1, 32, 32, 32)
 ```
 
 ## Training
