@@ -15,7 +15,7 @@ but this has to be tested.
 ## Install
 
 ```bash
-$ git clone https://github.com/trsvchn/diff3d.git
+$ git clone https://github.com/ida-mdc/diff3d.git
 $ cd diff3d
 $ pip install .
 ```
@@ -69,8 +69,9 @@ diffusion = GaussianDiffusion(
     loss_type="l1",  # L1 or L2
 )
 
-# New `inpaint` methods takes a batch of images and a batch of corresponding masks. Returns reconstructions os the same shape as images and masks. 
-# By deafault writes intermediate inpaintings to `./inpainting` directory every 100 timesteps. Set None or False to disable.
+# New `inpaint` method takes a batch of images and a batch of corresponding masks.
+# Returns reconstructions of the same shape as images and masks. 
+# By default, writes intermediate inpaintings to `./inpainting` directory every 100 timesteps. Set None or False to disable.
 images = torch.randn(4, 1, 32, 32, 32)  # (batch, channels, depth, height, width), normalized from 0 to 1 (e.g. after pil_to_tensor transform).
 masks = ...  # binary masks (batch, channels, depth, height, width), where 1 - indicates inpainting regions.
 
