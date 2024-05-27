@@ -20,7 +20,9 @@ dependencies = [
     "torch>=1.10",
     "torchvision",
     "transformers[torch]",
-    "tqdm"
+    "tqdm",
+    "light-the-torch",
+    "torchio>=0.19.6",
 ]
 dynamic = ["version"]
 

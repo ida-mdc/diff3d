@@ -23,6 +23,8 @@ from rotary_embedding_torch import RotaryEmbedding
 
 from .text import tokenize, bert_embed, BERT_MODEL_DIM
 
+import torchio as tio
+
 # helpers functions
 
 
@@ -841,6 +843,41 @@ def cast_num_frames(t, *, frames):
     return F.pad(t, (0, 0, 0, 0, 0, frames - f))
 
 
+class TIFDataset(data.Dataset):
+    def __init__(self, folder, image_size, channels=1, num_frames=16, exts=["tif"]):
+        super().__init__()
+        self.folder = folder
+        self.image_size = image_size
+        self.channels = channels
+        self.paths = [p for ext in exts for p in Path(f"{folder}").glob(f"**/*.{ext}")]
+
+        # Define TorchIO augmentations
+        self.transform = tio.Compose([
+            tio.RescaleIntensity(out_min_max=(0, 1)),
+            tio.RandomElasticDeformation(
+                num_control_points=(self.image_size // 10, self.image_size // 10, num_frames),
+                max_displacement=(10, 10, 0), 
+                locked_borders=2
+            ),            
+            tio.RandomFlip(axes=(0, 1, 2)),
+            tio.RandomBlur(std=(0.3,))
+        ])
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+        path = self.paths[index]
+        # Read the tiff image using TorchIO
+        subject = tio.Subject(
+            image=tio.ScalarImage(path)
+        )
+        subject = self.transform(subject)
+        tensor = subject['image']['data']
+        tensor = rearrange(tensor, 'c h w f -> c f h w')
+        return tensor
+
+
 class Dataset(data.Dataset):
     def __init__(
         self, folder, image_size, channels=1, num_frames=16, horizontal_flip=False, force_num_frames=True, exts=["gif"]
@@ -912,7 +949,8 @@ class Trainer(object):
         channels = diffusion_model.channels
         num_frames = diffusion_model.num_frames
 
-        self.ds = Dataset(folder, image_size, channels=channels, num_frames=num_frames)
+        #self.ds = Dataset(folder, image_size, channels=channels, num_frames=num_frames)
+        self.ds = TIFDataset(folder, image_size, channels=channels, num_frames=num_frames)
 
         print(f"found {len(self.ds)} videos as gif files at {folder}")
         assert len(self.ds) > 0, "need to have at least 1 video to start training (although 1 is not great, try 100k)"
