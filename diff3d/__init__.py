@@ -855,7 +855,7 @@ class TIFDataset(data.Dataset):
         self.transform = tio.Compose([
             tio.RescaleIntensity(out_min_max=(0, 1)),
             tio.RandomElasticDeformation(
-                num_control_points=(self.image_size // 10, self.image_size // 10, num_frames),
+                num_control_points=(self.image_size//20, self.image_size//20, 5),
                 max_displacement=(10, 10, 0), 
                 locked_borders=2
             ),            
